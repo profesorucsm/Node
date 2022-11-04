@@ -1,0 +1,14 @@
+{
+  "name": "nodehtml",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Mario Santillana",
+  "license": "ISC",
+  "dependencies": {
+    "file-server": "^2.2.1"
+  }
+}
