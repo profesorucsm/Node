@@ -1,3 +1,4 @@
+// importando paquete Express
 var express = require('express');
 
 // creando aplicación en Express

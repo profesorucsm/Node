@@ -1,0 +1,158 @@
+// Creando objetos de librerías importadas
+var express = require('express');
+var app = express();
+var mysql = require('mysql');
+var bodyParser = require('body-parser');
+
+// Cargando parámetros de Conexion con la BD
+var connection = mysql.createConnection({
+    host:'localhost',
+    database:'musicadb',
+    port:'8889',
+    user:'root',
+    password:'root',
+});
+
+// Conectarse a la BD y manejar errores
+connection.connect(function(err){
+    if(err) throw err;
+    console.log("Se conecto a la BD");
+});
+
+// Configurando el Parser(conversor) de formato HTTP a formato JSON
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({
+    extended:true
+}));
+
+// Creando Servidor
+var server = app.listen(3000,"127.0.0.1",function(){
+    var host = server.address().address;
+    var port = server.address().port;
+});
+
+// Creando y configurando API para recupera datos de musicdb/albums
+app.get('/albums',function(req, res){
+    connection.query('select * from albums', function(error,results){
+        if(error) throw error;
+        res.end(JSON.stringify(results));
+    })
+});
+
+// Creando y configurando API para recupera datos de musicdb/albums en base a ID
+app.get('/albums/:id',function(req, res){
+    connection.query('select * from albums where id=?', [req.params.id],function(error,results){
+        if(error) throw error;
+        res.end(JSON.stringify(results));
+    })
+});
+
+//////// PROCEDIMIENTOS ALMACENADOS
+
+delimiter $$
+create procedure listar_albums()
+begin
+    select * from albums;
+end;
+
+
+delimiter $$
+create procedure insertar_albums(
+    pTitulo varchar(200),
+    pLanzado date,
+    pPrecio double,
+    pGenero	 varchar(150)
+)
+begin
+    insert into albums (titulo, lanzado, precio, genero) values (pTitulo, pLanzado, 
+    pPrecio, pGenero);
+end;
+
+//////// SERVICIO WEB REST CON PROCEDIMIENTO
+
+/////// Crear -> config/connection.js
+
+// Creando objetos de librerías importadas
+var mysql = require('mysql');
+
+// Cargando parámetros de Conexion con la BD
+var con = mysql.createConnection({
+    host:'localhost',
+    database:'musicdb',
+    port:'8889',
+    user:'root',
+    password:'root',
+});
+
+// Conectarse a la BD y manejar errores
+con.connect(function(err){
+    if(err) throw err;
+    console.log("Se conecto a la BD");
+});
+
+module.exports = con;
+
+
+/////// Crear -> routes/albums.js
+
+// Creando objetos de librerías importadas
+const express = require('express');
+const appRouter = express.Router();
+var bodyParser = require('body-parser');
+
+const con = require("../config/connection");
+
+// Configurando el Parser(conversor) de formato HTTP a formato JSON
+appRouter.use(bodyParser.urlencoded({
+    extended:true
+}));
+appRouter.use(bodyParser.json());
+
+// Creando y configurando API para recuperar datos con Procedimiento Almacenado
+let sql_all = `call listar_albums()`;
+
+appRouter.get('/albums', (req,res)=>{
+    con.query(sql_all,(error, results)=>{
+        if(error) throw error;
+
+        res.send(results[0]);
+    });
+});
+
+
+// Creando y configurando API para insertar datos con Procedimiento Almacenado
+let sql_insert = `call insertar_albums(?,?,?,?)`;
+
+appRouter.post('/insertalbums', (req,res)=>{
+    const album = {
+        pTitulo : req.body.titulo,
+        pLanzado : req.body.lanzado,
+        pPrecio : req.body.precio,
+        pGenero : req.body.genero
+    };
+    con.query(sql_insert,[album.pTitulo,album.pLanzado,album.pPrecio,album.pGenero]
+        ,(error, results)=>{
+            if(error) throw error;
+
+            res.send(results[0]);
+        });
+});
+
+
+module.exports = appRouter;
+
+
+/////// Crear -> app.js
+
+const express = require('express');
+const app = express();
+const cors = require('cors');
+
+app.use(cors());
+
+app.listen('3000',()=>{
+    console.log("Servidor en Ejecucion");
+})
+
+const albumRouter = require('./routes/albums');
+app.use('/api',albumRouter);
