@@ -156,3 +156,50 @@ app.listen('3000',()=>{
 
 const albumRouter = require('./routes/albums');
 app.use('/api',albumRouter);
+
+
+///// Trabajando Autenticación con JSONWebToken
+
+// Importando Libreria en variable
+const jwt = require('jsonwebtoken');
+
+// Ruta para generar el Token
+appRouter.post('/login', (req,res)=>{
+    const user = {
+        id: 1,
+        username: "msantillana",
+        email: "msantillana@ucsm.edu.pe",
+    }
+    jwt.sign({user}, 'secretkey', {expiresIn: '30s'},(err,token)=>{
+        res.json({
+            token
+        });
+    });
+});
+
+// Función para validar que el Token ingresado es correcto
+function verifiToken(req,res,next){
+    const bearerHeader =  req.headers['authorization'];
+    if(typeof bearerHeader !== 'undefined'){
+        const bearer = bearerHeader.split(' ');
+        const bearerToken = bearer[1];
+        req.token = bearerToken;
+        next();
+    }else{
+        res.sendStatus(403);
+    }
+}
+
+// Ruta para invocar servicio con método Post utilizando Autenticación
+appRouter.post('/postseguro', verifiToken, (req,res)=>{
+    jwt.verify(req.token, 'secretkey', (err, authData)=>{
+        if(err){
+            res.sendStatus(403);
+        }else{
+            res.json({
+                mensaje: "Post Creado",
+                authData
+            });
+        }
+    });
+});
